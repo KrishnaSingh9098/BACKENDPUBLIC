@@ -1,24 +1,24 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema({
   userName: {
     type: String,
-    minLength: [3, "Username must caontain at least 3 characters."],
+    minLength: [3, "Username must contain at least 3 characters."],
     maxLength: [40, "Username cannot exceed 40 characters."],
   },
   password: {
     type: String,
-    selected: false,
-    minLength: [8, "Password must caontain at least 8 characters."],
+    select: false, // was `selected`, corrected it to `select`
+    minLength: [8, "Password must contain at least 8 characters."],
   },
   email: String,
   address: String,
   phone: {
     type: String,
-    minLength: [11, "Phone Number must caontain exact 11 digits."],
-    maxLength: [11, "Phone Number must caontain exact 11 digits."],
+    minLength: [11, "Phone Number must contain exactly 11 digits."],
+    maxLength: [11, "Phone Number must contain exactly 11 digits."],
   },
   profileImage: {
     public_id: {
@@ -65,17 +65,21 @@ const userSchema = new mongoose.Schema({
   },
 });
 
+// 🔐 Hash password before save
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
-    next();
+    return next();
   }
-  this.password = await bcrypt.hash(this.password, 10);
+  this.password = await bcryptjs.hash(this.password, 10);
+  next();
 });
 
+// 🔍 Compare passwords
 userSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return await bcryptjs.compare(enteredPassword, this.password);
 };
 
+// 🔑 Generate JWT
 userSchema.methods.generateJsonWebToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET_KEY, {
     expiresIn: process.env.JWT_EXPIRE,
